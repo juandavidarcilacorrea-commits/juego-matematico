@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Carrera Matemática - ¡Aprende Jugando!</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+
+        * {
+            font-family: 'Fredoka', cursive, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+            min-height: 100vh;
+        }
+
+        .game-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .option-btn {
+            background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+            box-shadow: 0 6px 0 #1e3a8a, 0 10px 15px rgba(0,0,0,0.3);
+            transition: all 0.1s ease;
+        }
+
+        .option-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #1e3a8a, 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .option-btn:hover {
+            filter: brightness(1.1);
+        }
+
+        canvas {
+            box-shadow: 0 15px 25px rgba(0, 0, 0, 0.5);
+            border-radius: 16px;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between p-2 sm:p-4 text-white min-h-screen">
+
+    <!-- Encabezado -->
+    <header class="w-full max-w-4xl flex items-center justify-between mb-2 sm:mb-3 px-2">
+        <div class="flex items-center gap-3">
+            <div class="bg-indigo-500 p-2.5 rounded-2xl text-white shadow-lg transform -rotate-6">
+                <i class="fa-solid fa-rocket text-2xl sm:text-3xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl sm:text-3xl font-bold tracking-wide text-cyan-300 drop-shadow-md">Carrera Matemática</h1>
+                <p class="text-xs sm:text-sm text-indigo-200">¡Pilota tu nave eligiendo la respuesta correcta!</p>
+            </div>
+        </div>
+        <button id="soundToggle" class="game-card p-3 rounded-xl hover:bg-white/20 transition flex items-center justify-center text-cyan-300">
+            <i id="soundIcon" class="fa-solid fa-volume-high text-lg sm:text-xl"></i>
+        </button>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="w-full max-w-4xl flex flex-col items-center gap-3 my-auto">
+        
+        <!-- Tablero de Estado -->
+        <div class="w-full game-card rounded-2xl p-2.5 sm:p-4 grid grid-cols-4 gap-2 sm:gap-4 text-center">
+            <div class="bg-slate-900/60 p-2 rounded-xl border border-indigo-500/20">
+                <span class="block text-xs text-indigo-300 font-medium">Puntos</span>
+                <span id="scoreDisplay" class="text-lg sm:text-2xl font-bold text-amber-400">0</span>
+            </div>
+            <div class="bg-slate-900/60 p-2 rounded-xl border border-indigo-500/20">
+                <span class="block text-xs text-indigo-300 font-medium">Nivel</span>
+                <span id="levelDisplay" class="text-lg sm:text-2xl font-bold text-cyan-400">1</span>
+            </div>
+            <div class="bg-slate-900/60 p-2 rounded-xl border border-indigo-500/20">
+                <span class="block text-xs text-indigo-300 font-medium">Racha</span>
+                <span id="streakDisplay" class="text-lg sm:text-2xl font-bold text-emerald-400">0 🔥</span>
+            </div>
+            <div class="bg-slate-900/60 p-2 rounded-xl border border-indigo-500/20">
+                <span class="block text-xs text-indigo-300 font-medium">Vidas</span>
+                <span id="livesDisplay" class="text-lg sm:text-2xl font-bold text-rose-400">❤️❤️❤️</span>
+            </div>
+        </div>
+
+        <!-- Opciones de Configuración (Modo y Dificultad) -->
+        <div class="w-full game-card rounded-2xl p-3 flex flex-wrap justify-between items-center gap-3 text-xs sm:text-sm">
+            <div class="flex items-center gap-2">
+                <span class="text-indigo-200 font-semibold"><i class="fa-solid fa-calculator text-cyan-400"></i> Operación:</span>
+                <select id="opSelect" class="bg-slate-800 text-white font-bold py-1.5 px-3 rounded-xl border border-indigo-500/40 focus:outline-none focus:border-cyan-400">
+                    <option value="add">Sumas (+)</option>
+                    <option value="sub">Restas (-)</option>
+                    <option value="mul">Multiplicación (×)</option>
+                    <option value="mix" selected>Mezclado ( All )</option>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span class="text-indigo-200 font-semibold"><i class="fa-solid fa-gauge-high text-amber-400"></i> Dificultad:</span>
+                <select id="diffSelect" class="bg-slate-800 text-white font-bold py-1.5 px-3 rounded-xl border border-indigo-500/40 focus:outline-none focus:border-cyan-400">
+                    <option value="easy">Fácil (1-10)</option>
+                    <option value="medium" selected>Medio (1-25)</option>
+                    <option value="hard">Difícil (1-50)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Área de Juego (Canvas) -->
+        <div class="relative w-full flex justify-center items-center">
+            <canvas id="gameCanvas" class="bg-slate-950 border-2 border-cyan-500/40 max-w-full h-auto"></canvas>
+            
+            <!-- Superposición de Inicio / Game Over -->
+            <div id="overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center p-6 text-center z-10">
+                <h2 id="overlayTitle" class="text-3xl sm:text-4xl font-extrabold text-amber-300 mb-2">¡Desafío Matemático!</h2>
+                <p id="overlayText" class="text-indigo-200 text-sm sm:text-base mb-6 max-w-md">Calcula la respuesta correcta antes de estrellar la nave contra el asteroide equivocado.</p>
+                <button id="startBtn" class="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-white font-bold text-lg shadow-lg active:scale-95 transition flex items-center gap-2">
+                    <i class="fa-solid fa-play"></i> Comenzar Juego
+                </button>
+            </div>
+        </div>
+
+        <!-- Botones de Opciones (Controles táctiles y visuales) -->
+        <div class="w-full grid grid-cols-3 gap-3 sm:gap-4 my-1">
+            <button id="btnOpt0" class="option-btn py-3 sm:py-4 rounded-2xl text-xl sm:text-3xl font-extrabold text-white">?</button>
+            <button id="btnOpt1" class="option-btn py-3 sm:py-4 rounded-2xl text-xl sm:text-3xl font-extrabold text-white">?</button>
+            <button id="btnOpt2" class="option-btn py-3 sm:py-4 rounded-2xl text-xl sm:text-3xl font-extrabold text-white">?</button>
+        </div>
+        <p class="text-xs text-indigo-300/70 text-center">Tip: También puedes presionar las teclas <strong>1</strong>, <strong>2</strong> o <strong>3</strong> en tu teclado.</p>
+    </main>
+
+    <script>
+        /* Sistema de Sonidos Sintetizados (Web Audio API) */
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playCorrect() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.1); // E5
+                osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.2); // G5
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            }
+
+            playWrong() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.linearRampToValueAtTime(110, now + 0.25);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+
+            playLevelUp() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                [440, 554.37, 659.25, 880].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.1, now + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.08 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.2);
+                });
+            }
+        }
+
+        const audio = new SoundFX();
+
+        /* Motor Principal del Juego */
+        class MathEngine {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                this.score = 0;
+                this.level = 1;
+                this.lives = 3;
+                this.streak = 0;
+                this.isPlaying = false;
+
+                this.opType = 'mix';
+                this.difficulty = 'medium';
+
+                this.problem = { text: '', answer: 0, options: [] };
+                this.asteroids = [];
+                this.stars = [];
+                this.playerX = 0;
+                this.targetPlayerX = 0;
+                this.asteroidY = 0;
+                this.speed = 0.4; // Velocidad súper lenta y pausada
+
+                this.initEventListeners();
+                this.resizeCanvas();
+                this.generateStars();
+                this.animate();
+            }
+
+            resizeCanvas() {
+                const maxW = Math.min(window.innerWidth - 32, 600);
+                this.canvas.width = maxW;
+                this.canvas.height = Math.floor(maxW * 0.7);
+                this.playerX = this.canvas.width / 2;
+                this.targetPlayerX = this.playerX;
+            }
+
+            generateStars() {
+                this.stars = [];
+                for (let i = 0; i < 40; i++) {
+                    this.stars.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        size: Math.random() * 2 + 1,
+                        speed: Math.random() * 0.3 + 0.1
+                    });
+                }
+            }
+
+            startGame() {
+                this.score = 0;
+                this.level = 1;
+                this.lives = 3;
+                this.streak = 0;
+                this.speed = 0.4;
+                this.isPlaying = true;
+                this.updateUI();
+
+                document.getElementById('overlay').classList.add('hidden');
+                this.generateProblem();
+            }
+
+            generateProblem() {
+                this.opType = document.getElementById('opSelect').value;
+                this.difficulty = document.getElementById('diffSelect').value;
+
+                let maxNum = 10;
+                if (this.difficulty === 'medium') maxNum = 25;
+                if (this.difficulty === 'hard') maxNum = 50;
+
+                let currentOp = this.opType;
+                if (currentOp === 'mix') {
+                    const ops = ['add', 'sub', 'mul'];
+                    currentOp = ops[Math.floor(Math.random() * ops.length)];
+                }
+
+                let num1, num2, ans, text;
+
+                if (currentOp === 'add') {
+                    num1 = Math.floor(Math.random() * maxNum) + 1;
+                    num2 = Math.floor(Math.random() * maxNum) + 1;
+                    ans = num1 + num2;
+                    text = `${num1} + ${num2}`;
+                } else if (currentOp === 'sub') {
+                    num1 = Math.floor(Math.random() * maxNum) + 1;
+                    num2 = Math.floor(Math.random() * num1) + 1; 
+                    ans = num1 - num2;
+                    text = `${num1} - ${num2}`;
+                } else if (currentOp === 'mul') {
+                    const mulMax = this.difficulty === 'easy' ? 5 : (this.difficulty === 'medium' ? 10 : 12);
+                    num1 = Math.floor(Math.random() * mulMax) + 1;
+                    num2 = Math.floor(Math.random() * mulMax) + 1;
+                    ans = num1 * num2;
+                    text = `${num1} × ${num2}`;
+                }
+
+                let options = [ans];
+                while (options.length < 3) {
+                    let offset = (Math.floor(Math.random() * 5) + 1) * (Math.random() < 0.5 ? 1 : -1);
+                    let wrong = ans + offset;
+                    if (wrong >= 0 && !options.includes(wrong)) {
+                        options.push(wrong);
+                    }
+                }
+                options.sort(() => Math.random() - 0.5);
+
+                this.problem = { text, answer: ans, options };
+                this.asteroidY = -50;
+
+                options.forEach((opt, idx) => {
+                    document.getElementById(`btnOpt${idx}`).innerText = opt;
+                });
+
+                const laneWidth = this.canvas.width / 3;
+                this.asteroids = options.map((opt, idx) => ({
+                    x: laneWidth * idx + laneWidth / 2,
+                    val: opt,
+                    isCorrect: opt === ans
+                }));
+            }
+
+            selectOption(index) {
+                if (!this.isPlaying) return;
+
+                const selected = this.problem.options[index];
+                const targetX = this.asteroids[index].x;
+                this.targetPlayerX = targetX;
+
+                if (selected === this.problem.answer) {
+                    audio.playCorrect();
+                    this.score += 100 + (this.streak * 10);
+                    this.streak++;
+                    
+                    if (this.streak % 3 === 0) {
+                        this.level++;
+                        this.speed += 0.1;
+                        audio.playLevelUp();
+                        confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
+                    }
+                } else {
+                    audio.playWrong();
+                    this.lives--;
+                    this.streak = 0;
+                }
+
+                this.updateUI();
+
+                if (this.lives <= 0) {
+                    this.gameOver();
+                } else {
+                    this.generateProblem();
+                }
+            }
+
+            gameOver() {
+                this.isPlaying = false;
+                document.getElementById('overlayTitle').innerText = "¡Juego Terminado!";
+                document.getElementById('overlayText').innerText = `Puntuación final: ${this.score} puntos | Nivel alcanzado: ${this.level}`;
+                document.getElementById('startBtn').innerText = "Volver a Jugar";
+                document.getElementById('overlay').classList.remove('hidden');
+            }
+
+            updateUI() {
+                document.getElementById('scoreDisplay').innerText = this.score;
+                document.getElementById('levelDisplay').innerText = this.level;
+                document.getElementById('streakDisplay').innerText = `${this.streak} 🔥`;
+                document.getElementById('livesDisplay').innerText = '❤️'.repeat(Math.max(0, this.lives));
+            }
+
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.ctx.fillStyle = '#ffffff';
+                this.stars.forEach(star => {
+                    this.ctx.beginPath();
+                    this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    star.y += star.speed;
+                    if (star.y > this.canvas.height) star.y = 0;
+                });
+
+                if (this.isPlaying) {
+                    this.asteroidY += this.speed;
+
+                    this.ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+                    this.ctx.fillRect(this.canvas.width / 2 - 110, 10, 220, 50);
+                    this.ctx.strokeStyle = '#38bdf8';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(this.canvas.width / 2 - 110, 10, 220, 50);
+
+                    this.ctx.font = 'bold 26px Fredoka';
+                    this.ctx.fillStyle = '#fde047';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(`${this.problem.text} = ?`, this.canvas.width / 2, 44);
+
+                    const radius = Math.min(35, this.canvas.width * 0.08);
+                    this.asteroids.forEach((ast) => {
+                        this.ctx.save();
+                        this.ctx.translate(ast.x, this.asteroidY);
+
+                        this.ctx.beginPath();
+                        this.ctx.arc(0, 0, radius, 0, Math.PI * 2);
+                        this.ctx.fillStyle = '#475569';
+                        this.ctx.fill();
+                        this.ctx.strokeStyle = '#94a3b8';
+                        this.ctx.lineWidth = 4;
+                        this.ctx.stroke();
+
+                        this.ctx.font = 'bold 22px Fredoka';
+                        this.ctx.fillStyle = '#ffffff';
+                        this.ctx.textAlign = 'center';
+                        this.ctx.textBaseline = 'middle';
+                        this.ctx.fillText(ast.val, 0, 0);
+
+                        this.ctx.restore();
+                    });
+
+                    if (this.asteroidY > this.canvas.height - 70) {
+                        audio.playWrong();
+                        this.lives--;
+                        this.streak = 0;
+                        this.updateUI();
+                        if (this.lives <= 0) {
+                            this.gameOver();
+                        } else {
+                            this.generateProblem();
+                        }
+                    }
+                }
+
+                // Dibujar Nave Espacial abajo
+                this.playerX += (this.targetPlayerX - this.playerX) * 0.15;
+                this.ctx.save();
+                this.ctx.translate(this.playerX, this.canvas.height - 40);
+
+                // Cuerpo de la nave
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, -20);
+                this.ct
